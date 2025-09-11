@@ -118,6 +118,28 @@ Key options in `config/laravel-cloudflare.php`:
 - If Cloudflare is temporarily unreachable, the refresh will keep the last cached values instead of wiping the cache.
 - You're free to use these lists however you like; TrustProxies is just a common use case.
 
+## Using with Laravel Octane
+
+When you use this package to trust Cloudflare proxies via the `TrustProxies` middleware, while running behind Laravel Octane, keep the following in mind:
+
+The proxy IP list you define in `bootstrap/app.php` is loaded into memory and only updates when the Octane workers restart.
+
+Result: after you run `php artisan cloudflare:refresh`, workers do not immediately see the refreshed IP list.
+
+Usually this is fine because:
+- Cloudflare IP ranges rarely change.
+- Octane workers restart after serving 500 requests by default.
+- Octane workers restart when the application is deployed.
+
+It can be a problem when:
+- Your Octane workers do not restart soon enough for your needs (e.g., low traffic, high max requests setting, many workers).
+- You want to always have the latest IPs in your Octane workers, no matter what.
+
+If either applies:
+- Restart the Octane workers with `php artisan octane:restart` after running `php artisan cloudflare:refresh`.
+
+See the Laravel Octane documentation for more details: https://laravel.com/docs/octane
+
 ## License
 
 MIT License. See `LICENSE.md`.
