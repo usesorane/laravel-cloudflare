@@ -1,0 +1,15 @@
+<?php
+
+use Illuminate\Support\Facades\Http;
+use Sorane\LaravelCloudflare\Facades\LaravelCloudflare as LaravelCloudflareFacade;
+
+it('facade proxies to the service', function (): void {
+    Http::fake([
+        'www.cloudflare.com/ips-v4' => Http::response("1.1.1.1/32\n10.0.0.0/8", 200),
+        'www.cloudflare.com/ips-v6' => Http::response('2606:4700::/32', 200),
+    ]);
+
+    $ips = LaravelCloudflareFacade::all();
+
+    expect($ips)->toEqual(['1.1.1.1/32', '10.0.0.0/8', '2606:4700::/32']);
+});
