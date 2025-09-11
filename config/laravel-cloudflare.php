@@ -27,4 +27,9 @@ return [
             'ipv6' => 'https://www.cloudflare.com/ips-v6',
         ],
     ],
+
+    'logging' => [
+        // Whether to log a warning when a fetch to Cloudflare endpoints fails
+        'failed_fetch' => env('CLOUDFLARE_LOG_FAILED_FETCH', true),
+    ],
 ];

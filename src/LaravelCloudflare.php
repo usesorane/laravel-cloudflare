@@ -8,6 +8,8 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class LaravelCloudflare
 {
@@ -110,13 +112,33 @@ class LaravelCloudflare
         $retry = Config::get('laravel-cloudflare.http.retry', [3, 200]);
         $userAgent = Config::get('laravel-cloudflare.http.user_agent', 'usesorane/laravel-cloudflare');
 
-        $response = Http::withHeaders([
-            'User-Agent' => (string) $userAgent,
-        ])->timeout($timeout)
-            ->retry((int) Arr::get($retry, 0, 3), (int) Arr::get($retry, 1, 200))
-            ->get($endpoint);
+        try {
+            $response = Http::withHeaders([
+                'User-Agent' => (string) $userAgent,
+            ])->timeout($timeout)
+                ->retry((int) Arr::get($retry, 0, 3), (int) Arr::get($retry, 1, 200))
+                ->get($endpoint);
 
-        if (! $response->successful()) {
+            if (! $response->successful()) {
+                if (Config::get('laravel-cloudflare.logging.failed_fetch', true)) {
+                    Log::warning('laravel-cloudflare: failed to fetch IP ranges', [
+                        'type' => $type,
+                        'endpoint' => $endpoint,
+                        'status' => $response->status(),
+                    ]);
+                }
+
+                return [];
+            }
+        } catch (Throwable $e) {
+            if (Config::get('laravel-cloudflare.logging.failed_fetch', true)) {
+                Log::warning('laravel-cloudflare: exception while fetching IP ranges', [
+                    'type' => $type,
+                    'endpoint' => $endpoint,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             return [];
         }
 
