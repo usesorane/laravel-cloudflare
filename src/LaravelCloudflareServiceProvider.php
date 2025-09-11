@@ -13,7 +13,7 @@ class LaravelCloudflareServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../config/laravel-cloudflare.php', 'laravel-cloudflare');
 
         // Bind the main service
-        $this->app->singleton(LaravelCloudflare::class, static function ($app): LaravelCloudflare {
+        $this->app->singleton(LaravelCloudflare::class, static function (): LaravelCloudflare {
             return new LaravelCloudflare;
         });
     }

@@ -10,19 +10,19 @@ Common use case is to trust Cloudflare proxies in `TrustProxies` middleware.
 
 ## Installation
 
-You can install the package via composer:
+Install the package via composer:
 
 ```bash
 composer require usesorane/laravel-cloudflare
 ```
 
-(Optional) You can publish the config file with:
+(Optional) Publish the config file:
 
 ```bash
 php artisan vendor:publish --tag="laravel-cloudflare-config"
 ```
 
-This is the contents of the published config file:
+This is the content of the config file:
 
 ```php
 return [
@@ -61,62 +61,54 @@ return [
 	- https://www.cloudflare.com/ips-v4
 	- https://www.cloudflare.com/ips-v6
 - Caches the lists for 24h by default
-- Provides a command to refresh the cache: `php artisan cloudflare:refresh`
-- Next, add the IPs to the `TrustProxies` middleware:
+- Provides a command to keep the list up-to-date: `php artisan cloudflare:refresh`
+- Get the lists in your code via the `LaravelCloudflare` service:
+    - `ipv4()`: get IPv4 addresses
+    - `ipv6()`: get IPv6 addresses
+    - `all()`: get all addresses (v4 + v6)
+    - `refresh()`: fetch and cache immediately
 
 ## Quick usage
 
-Trust Cloudflare proxies in your `bootstrap/app.php`:
+The most common use case is to trust Cloudflare proxies in your application.
+
+Run the following command to fetch and cache the IPs initially:
+
+```bash
+php artisan cloudflare:refresh
+```
+
+To keep the list updated, add the command to your application's scheduler (`routes/console.php`):
+
+```php
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::command('cloudflare:refresh')->twiceDaily(); // or ->daily(), ->hourly(), etc.
+```
+
+Add the list of IPs to the `TrustProxies` middleware in `bootstrap/app.php`:
 
 ```php
 use Sorane\LaravelCloudflare\LaravelCloudflare;
 
 ->withMiddleware(function (Middleware $middleware) {
     $ips = app(LaravelCloudflare::class)->all();
+    // Add any other IPs you want to trust to the $ips array here
     $middleware->trustProxies(at: $ips);
 })
 ```
 
-### Scheduling
-
-Add the command to your application's scheduler (e.g., `app/Console/Kernel.php`):
-
-```php
-protected function schedule(Schedule $schedule): void
-{
-    $schedule->command('cloudflare:refresh')->twiceDaily(); // or ->daily(), ->hourly(), etc.
-}
-```
-
-Or fetch explicitly via the command:
-
-```bash
-php artisan cloudflare:refresh
-```
-
-Or use it anywhere in code:
+(Optional) Interact with the service directly:
 
 ```php
 use Sorane\LaravelCloudflare\LaravelCloudflare;
 
 $cloudflare = app(LaravelCloudflare::class);
+$cloudflare->refresh(); // fetch and cache immediately
 $v4Ips = $cloudflare->ipv4();
 $v6Ips = $cloudflare->ipv6();
 $allIps = $cloudflare->all();
 ```
-
-## Configuration
-
-Key options in `config/laravel-cloudflare.php`:
-
-- `cache.store`: which cache store to use (null uses default)
-- `cache.ttl`: seconds to keep the lists (null = forever)
-- `schedule.enabled` and `schedule.expression`: package self-scheduling
-
-## Notes
-
-- If Cloudflare is temporarily unreachable, the refresh will keep the last cached values instead of wiping the cache.
-- You're free to use these lists however you like; TrustProxies is just a common use case.
 
 ## Using with Laravel Octane
 
