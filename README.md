@@ -5,8 +5,9 @@
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/usesorane/laravel-cloudflare/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/usesorane/laravel-cloudflare/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/usesorane/laravel-cloudflare.svg?style=flat-square)](https://packagist.org/packages/usesorane/laravel-cloudflare)
 
-Fetch and cache all IP addresses of Cloudflare to use in your Laravel application.
-Common use case is to trust Cloudflare proxies in `TrustProxies` middleware.
+Retrieve the current Cloudflare IP ranges, cache them, automatically update them when they change, and access them through a simple service. 
+
+Use the list in your `TrustProxies` middleware to trust all Cloudflare IPs automatically.
 
 ## Installation
 
@@ -62,7 +63,7 @@ return [
 	- https://www.cloudflare.com/ips-v6
 - Caches the lists for 24h by default
 - Provides a command to keep the list up-to-date: `php artisan cloudflare:refresh`
-- Get the lists in your code via the `LaravelCloudflare` service:
+- Interact with the lists in your code via the `LaravelCloudflare` service:
     - `ipv4()`: get IPv4 addresses
     - `ipv6()`: get IPv6 addresses
     - `all()`: get all addresses (v4 + v6)
