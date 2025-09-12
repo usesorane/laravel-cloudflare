@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Sorane\LaravelCloudflare\LaravelCloudflare;
 
-it('logs a warning when fetch fails and logging enabled', function (): void {
+it('logs a warning when refresh fails and logging enabled', function (): void {
     Http::fake([
         'www.cloudflare.com/*' => Http::response('', 500),
     ]);
@@ -13,9 +13,9 @@ it('logs a warning when fetch fails and logging enabled', function (): void {
     Log::spy();
 
     $service = app(LaravelCloudflare::class);
-    $service->ipv4();
+    $service->refresh();
 
-    Log::shouldHaveReceived('warning')->once();
+    Log::shouldHaveReceived('warning')->atLeast()->once();
 });
 
 it('does not log a warning when disabled via config', function (): void {
@@ -28,7 +28,7 @@ it('does not log a warning when disabled via config', function (): void {
     Log::spy();
 
     $service = app(LaravelCloudflare::class);
-    $service->ipv6();
+    $service->refresh();
 
     Log::shouldNotHaveReceived('warning');
 });

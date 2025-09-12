@@ -22,8 +22,8 @@ class LaravelCloudflareCommand extends Command
         $v6 = $service->ipv6();
         $all = $service->all();
 
-        $this->line('IPv4: '.count($v4).', IPv6: '.count($v6).', All: '.count($all));
-        $this->comment('Cloudflare IP ranges refreshed and cached.');
+        $this->line('IPv4 (current or fallback): '.count($v4).', IPv6 (current or fallback): '.count($v6).', All (current or fallback): '.count($all));
+        $this->comment('Cloudflare IP ranges refreshed (current + last_good updated on success).');
 
         return self::SUCCESS;
     }

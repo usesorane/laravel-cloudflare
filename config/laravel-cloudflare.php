@@ -5,15 +5,25 @@ return [
         // Cache store to use (null = default store)
         'store' => env('CLOUDFLARE_CACHE_STORE', null),
 
-        // Cache keys used to store IP ranges
+        // Primary cache keys ("current" – refreshed list) and fallback ("last_good" – permanent)
         'keys' => [
-            'all' => 'cloudflare:ips',
-            'v4' => 'cloudflare:ips:v4',
-            'v6' => 'cloudflare:ips:v6',
+            'current' => [
+                'all' => 'cloudflare:ips:current',
+                'v4' => 'cloudflare:ips:v4:current',
+                'v6' => 'cloudflare:ips:v6:current',
+            ],
+            'last_good' => [
+                'all' => 'cloudflare:ips:last_good',
+                'v4' => 'cloudflare:ips:v4:last_good',
+                'v6' => 'cloudflare:ips:v6:last_good',
+            ],
         ],
 
-        // Time to live in seconds (null = forever)
-        'ttl' => env('CLOUDFLARE_CACHE_TTL', 60 * 60 * 24), // 24 hours
+        // Time to live in seconds for the "current" list (null = forever). Default: 7 days.
+        'ttl' => env('CLOUDFLARE_CACHE_TTL', 60 * 60 * 24 * 7),
+
+        // Allow falling back to the last known good list when current is missing/expired.
+        'allow_stale' => env('CLOUDFLARE_ALLOW_STALE', true),
     ],
 
     // HTTP client settings for fetching IP ranges from Cloudflare

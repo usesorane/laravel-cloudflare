@@ -9,7 +9,9 @@ it('can provide an array suitable for trust proxies', function (): void {
         'www.cloudflare.com/ips-v6' => Http::response('2606:4700::/32', 200),
     ]);
 
-    $ips = app(LaravelCloudflare::class)->all();
+    $service = app(LaravelCloudflare::class);
+    $service->refresh();
+    $ips = $service->all();
 
     expect($ips)->toBeArray()
         ->and($ips)->toEqual(['1.1.1.1/32', '10.0.0.0/8', '2606:4700::/32']);
