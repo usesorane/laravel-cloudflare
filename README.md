@@ -1,8 +1,8 @@
 # Laravel Cloudflare
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/usesorane/laravel-cloudflare.svg?style=flat-square)](https://packagist.org/packages/usesorane/laravel-cloudflare)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/usesorane/laravel-cloudflare/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/usesorane/laravel-cloudflare/actions?query=workflow%3Alaravel-package-tests+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/usesorane/laravel-cloudflare.svg?style=flat-square)](https://packagist.org/packages/usesorane/laravel-cloudflare)
+[![Latest Version](https://img.shields.io/packagist/v/usesorane/laravel-cloudflare.svg)](https://packagist.org/packages/usesorane/laravel-cloudflare)
+[![Tests](https://img.shields.io/github/actions/workflow/status/usesorane/laravel-cloudflare/laravel-package-tests.yml?branch=main&label=tests)](https://github.com/usesorane/laravel-cloudflare/actions/workflows/laravel-package-tests.yml)
+[![Total Downloads](https://img.shields.io/packagist/dt/usesorane/laravel-cloudflare.svg)](https://packagist.org/packages/usesorane/laravel-cloudflare)
 
 Retrieve the current Cloudflare IP ranges, cache them, automatically update them when they change, and access them through a simple service. 
 
