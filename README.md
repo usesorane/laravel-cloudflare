@@ -20,7 +20,7 @@ composer require usesorane/laravel-cloudflare
 (Optional) Publish the config file:
 
 ```bash
-php artisan vendor:publish --tag="laravel-cloudflare-config"
+php artisan vendor:publish --tag="laravel-cloudflare"
 ```
 
 This is the content of the config file:
