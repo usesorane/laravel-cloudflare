@@ -143,4 +143,4 @@ See the Laravel Octane documentation for more details: https://laravel.com/docs/
 
 ## License
 
-MIT License. See `LICENSE.md`.
+Licensed under the MIT License. See `LICENSE.md`.
