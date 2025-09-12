@@ -98,9 +98,12 @@ Add the list of IPs to the `TrustProxies` middleware in `bootstrap/app.php`:
 use Sorane\LaravelCloudflare\LaravelCloudflare;
 
 ->withMiddleware(function (Middleware $middleware) {
-    $ips = app(LaravelCloudflare::class)->all();
-    // Add any other IPs you want to trust to the $ips array here
-    $middleware->trustProxies(at: $ips);
+    $cloudflareIps = app(LaravelCloudflare::class)->all();
+    $ipsToTrust = [
+        // Add other IPs you want to trust here
+        ...$cloudflareIps,
+    ];
+    $middleware->trustProxies(at: $ipsToTrust);
 })
 ```
 
