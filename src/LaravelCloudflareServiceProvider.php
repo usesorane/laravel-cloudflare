@@ -10,7 +10,7 @@ class LaravelCloudflareServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Merge package config
-        $this->mergeConfigFrom(__DIR__.'/../config/laravel-cloudflare.php', 'laravel-cloudflare');
+        $this->mergeConfigFrom(__DIR__.'/../config/laravel-cloudflare.php', 'laravel-cloudflare-config');
 
         // Bind the main service
         $this->app->singleton(LaravelCloudflare::class, static function (): LaravelCloudflare {
@@ -23,7 +23,7 @@ class LaravelCloudflareServiceProvider extends ServiceProvider
         // Publish config
         $this->publishes([
             __DIR__.'/../config/laravel-cloudflare.php' => config_path('laravel-cloudflare.php'),
-        ], 'config');
+        ], 'laravel-cloudflare-config');
 
         // Register the command
         if ($this->app->runningInConsole()) {
