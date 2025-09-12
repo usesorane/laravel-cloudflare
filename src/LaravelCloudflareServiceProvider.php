@@ -3,6 +3,7 @@
 namespace Sorane\LaravelCloudflare;
 
 use Illuminate\Support\ServiceProvider;
+use Sorane\LaravelCloudflare\Commands\CloudflareCacheInfoCommand;
 use Sorane\LaravelCloudflare\Commands\LaravelCloudflareCommand;
 
 class LaravelCloudflareServiceProvider extends ServiceProvider
@@ -29,6 +30,7 @@ class LaravelCloudflareServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 LaravelCloudflareCommand::class,
+                CloudflareCacheInfoCommand::class,
             ]);
         }
     }

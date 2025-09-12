@@ -72,18 +72,19 @@ return [
     - `ipv6()`: get IPv6 addresses
     - `all()`: get all addresses (v4 + v6)
     - `refresh()`: fetch and cache immediately
+    - `cacheInfo()`: get info about the cached lists
 
 ## Quick usage
 
 The most common use case is to trust Cloudflare proxies in your application.
 
-Run the following command to fetch and cache the IPs initially:
+1. Run the following command to fetch and cache the IPs initially:
 
 ```bash
 php artisan cloudflare:refresh
 ```
 
-To keep the list updated, add the command to your application's scheduler (`routes/console.php`):
+2. Register the refresh command to your application's scheduler (`routes/console.php`):
 
 ```php
 use Illuminate\Support\Facades\Schedule;
@@ -91,7 +92,7 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('cloudflare:refresh')->twiceDaily(); // or ->daily(), ->hourly(), etc.
 ```
 
-Add the list of IPs to the `TrustProxies` middleware in `bootstrap/app.php`:
+3. Add the list of IPs to the `TrustProxies` middleware in `bootstrap/app.php`:
 
 ```php
 use Sorane\LaravelCloudflare\LaravelCloudflare;
@@ -106,7 +107,13 @@ use Sorane\LaravelCloudflare\LaravelCloudflare;
 })
 ```
 
-(Optional) Interact with the service directly:
+4. Use the `cache-info` command to see information about the currently cached IPs.
+
+```bash
+php artisan cloudflare:cache-info
+```
+
+## The LaravelCloudflare service
 
 ```php
 use Sorane\LaravelCloudflare\LaravelCloudflare;
@@ -116,6 +123,7 @@ $cloudflare->refresh(); // fetch and cache immediately
 $v4Ips = $cloudflare->ipv4();
 $v6Ips = $cloudflare->ipv6();
 $allIps = $cloudflare->all();
+$cacheInfo = $cloudflare->cacheInfo();
 ```
 
 ## Using with Laravel Octane

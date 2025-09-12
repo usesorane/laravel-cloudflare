@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static array ipv4()
  * @method static array ipv6()
  * @method static void refresh()
+ * @method static array cacheInfo()
  */
 class LaravelCloudflare extends Facade
 {

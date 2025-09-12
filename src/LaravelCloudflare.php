@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Psr\SimpleCache\InvalidArgumentException;
 use Throwable;
 
 class LaravelCloudflare
@@ -188,5 +189,53 @@ class LaravelCloudflare
         }
 
         $this->cache->put($key, $value, $ttl);
+    }
+
+    /**
+     * Provide introspection details about current cache state without triggering network fetches.
+     *
+     * @return array{
+     *     store: string|null,
+     *     configured_ttl: int|null,
+     *     keys: array<string, array{key: string, present: bool, count: int}>
+     * }
+     * @throws InvalidArgumentException
+     */
+    public function cacheInfo(): array
+    {
+        $configKeys = Config::get('laravel-cloudflare.cache.keys', []);
+
+        $keyAll = $configKeys['all'] ?? 'cloudflare:ips';
+        $keyV4 = $configKeys['v4'] ?? 'cloudflare:ips:v4';
+        $keyV6 = $configKeys['v6'] ?? 'cloudflare:ips:v6';
+
+        $keys = [
+            'v4' => $keyV4,
+            'v6' => $keyV6,
+            'all' => $keyAll,
+        ];
+
+        $details = [];
+        foreach ($keys as $label => $key) {
+            $present = $this->cache->has($key);
+            $count = 0;
+            if ($present) {
+                $value = $this->cache->get($key);
+                if (is_array($value)) {
+                    $count = count($value);
+                }
+            }
+            $details[$label] = [
+                'key' => $key,
+                'present' => $present,
+                'count' => $count,
+            ];
+        }
+
+        return [
+            'store' => Config::get('laravel-cloudflare.cache.store'),
+            'configured_ttl' => Config::get('laravel-cloudflare.cache.ttl'),
+            'keys' => $details,
+        ];
     }
 }
