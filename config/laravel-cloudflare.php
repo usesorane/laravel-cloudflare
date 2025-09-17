@@ -42,4 +42,12 @@ return [
         // Whether to log a warning when a fetch to Cloudflare endpoints fails
         'failed_fetch' => env('CLOUDFLARE_LOG_FAILED_FETCH', true),
     ],
+
+    'diagnostics' => [
+        // Enable the diagnostics route (default: false)
+        'enabled' => env('CLOUDFLARE_DIAGNOSTICS_ENABLED', false),
+
+        // Path for the diagnostics route
+        'path' => env('CLOUDFLARE_DIAGNOSTICS_PATH', '/cloudflare-diagnose'),
+    ],
 ];

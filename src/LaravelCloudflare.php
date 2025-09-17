@@ -106,8 +106,10 @@ class LaravelCloudflare
 
     /**
      * Force refresh: fetch new lists and write to current + last_good only if successful.
+     *
+     * Returns true if both IPv4 and IPv6 lists were fetched (non-empty) and cached; false otherwise.
      */
-    public function refresh(): void
+    public function refresh(): bool
     {
         $keys = Config::get('laravel-cloudflare.cache.keys');
         $ttl = Config::get('laravel-cloudflare.cache.ttl');
@@ -131,7 +133,7 @@ class LaravelCloudflare
                 ]);
             }
 
-            return;
+            return false;
         }
 
         $merged = array_values(array_unique(array_merge($newV4, $newV6)));
@@ -145,6 +147,8 @@ class LaravelCloudflare
         $this->cache->forever($lastGoodV4Key, $newV4);
         $this->cache->forever($lastGoodV6Key, $newV6);
         $this->cache->forever($lastGoodAllKey, $merged);
+
+        return true;
     }
 
     /**

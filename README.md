@@ -4,9 +4,9 @@
 [![Tests](https://img.shields.io/github/actions/workflow/status/usesorane/laravel-cloudflare/laravel-package-tests.yml?branch=main&label=tests)](https://github.com/usesorane/laravel-cloudflare/actions/workflows/laravel-package-tests.yml)
 [![Total Downloads](https://img.shields.io/packagist/dt/usesorane/laravel-cloudflare.svg)](https://packagist.org/packages/usesorane/laravel-cloudflare)
 
-Retrieve the current Cloudflare IP ranges, cache them, automatically update them when they change, and access them through a simple service. 
+Retrieve the current Cloudflare IP ranges, cache them, automatically update them, and access them through a simple service. 
 
-Use the list in your `TrustProxies` middleware to trust all Cloudflare IPs automatically.
+Use the IP list in your `TrustProxies` middleware to trust all Cloudflare IPs automatically.
 
 ## Installation
 
@@ -22,7 +22,7 @@ composer require usesorane/laravel-cloudflare
 php artisan vendor:publish --tag="laravel-cloudflare"
 ```
 
-This is the content of the config file:
+Content of the config file:
 
 ```php
 return [
@@ -66,6 +66,14 @@ return [
     'logging' => [
         // Whether to log a warning when a fetch to Cloudflare endpoints fails
         'failed_fetch' => env('CLOUDFLARE_LOG_FAILED_FETCH', true),
+    ],
+
+    'diagnostics' => [
+        // Enable the diagnostics route (default: false)
+        'enabled' => env('CLOUDFLARE_DIAGNOSTICS_ENABLED', false),
+
+        // Path for the diagnostics route
+        'path' => env('CLOUDFLARE_DIAGNOSTICS_PATH', '/cloudflare-diagnose'),
     ],
 ];
 ```
@@ -111,10 +119,10 @@ use Sorane\LaravelCloudflare\LaravelCloudflare;
     // Your other middleware interactions here...
 
     app()->booted(function () use ($middleware) {
-        $cloudflareIps = app(LaravelCloudflare::class)->all();
+        $cloudflareIps = app(\Sorane\LaravelCloudflare\LaravelCloudflare::class)->all();
         $ipsToTrust = [
             ...$cloudflareIps,
-            // Add any other proxies you want to trust here
+            // Add any other IPs you want to trust here
         ];
         $middleware->trustProxies(at: $ipsToTrust);
     });
@@ -123,13 +131,13 @@ use Sorane\LaravelCloudflare\LaravelCloudflare;
 
 Note: Use `app()->booted()` to ensure the application is fully booted and the cache is accessible.
 
-Note 2: The `all()` method can never return an empty array, if you've at least once successfully run `cloudflare:refresh`. Read more about the caching design below.
-
 4. Use the `cache-info` command to see information about the currently cached IPs.
 
 ```bash
 php artisan cloudflare:cache-info
 ```
+
+5. Enable the diagnostics route (optional) by setting `CLOUDFLARE_DIAGNOSTICS_ENABLED=true` in your `.env` file. Then visit `/cloudflare-diagnose` in your app to see how Cloudflare and your server headers are interpreted by Laravel.
 
 ## The LaravelCloudflare service
 
@@ -149,17 +157,12 @@ $cacheInfo = $cloudflare->cacheInfo();
 To avoid network calls during request handling and still remain resilient if Cloudflare is temporarily unreachable, the package maintains two cache layers:
 
 * current – the actively refreshed list with a configurable TTL (default 7 days).
-* last_good – a permanent (forever) copy updated only after a fully successful refresh (both IPv4 and IPv6 lists fetched). It is never cleared on a failed refresh.
+* last_good – a permanent copy updated only after a successful refresh. It is not cleared on a failed refresh.
 
 Lookup order for `ipv4()`, `ipv6()`, and `all()`:
 1. current list
-2. last_good list (when `allow_stale` is true)
+2. last_good list
 3. (logs a warning and returns an empty array only if neither exists – typically only before the very first refresh)
-
-Advantages:
-* No request latency spikes from on-demand fetching.
-* Transient network failures do not drop trusted proxy IPs – the last_good list continues to be served.
-* Safe refresh semantics: last_good updates only after a fully successful fetch of both families.
 
 Relevant config options (`config/laravel-cloudflare.php`):
 * `cache.ttl` – lifetime for current list (seconds, null = forever).
@@ -167,9 +170,65 @@ Relevant config options (`config/laravel-cloudflare.php`):
 * Distinct key sets under `cache.keys.current` and `cache.keys.last_good`.
 
 Operational recommendation:
-* Run `cloudflare:refresh` in your deployment pipeline and via the scheduler. A single success seeds both caching layers.
+* Run `cloudflare:refresh` in your deployment pipeline and via the scheduler.
 * Keep the TTL of last_good infinite (null) to ensure a fallback is always available.
 * Regularly check logs and use `cloudflare:cache-info` to monitor cache status.
+
+## Diagnostics route (optional)
+
+You can expose a small diagnostics endpoint to see how Cloudflare and your server headers are interpreted by Laravel.
+
+- Enable it via env/config:
+    - `CLOUDFLARE_DIAGNOSTICS_ENABLED=true`
+    - Optional custom path: `CLOUDFLARE_DIAGNOSTICS_PATH=/cloudflare-diagnose` (default is `/cloudflare-diagnose`)
+- When enabled, a GET endpoint is registered at the configured path and returns JSON like:
+
+```json
+{
+    "laravel_ip": "203.0.113.5",
+    "remote_addr": "172.16.0.10",
+    "x_forwarded_for": "203.0.113.5, 172.16.0.10",
+    "cf_connecting_ip": "203.0.113.5",
+    "true_client_ip": "203.0.113.5",
+    "server_https": "on",
+    "is_secure": true
+}
+```
+
+How to interpret:
+- `laravel_ip`: The client IP as seen by Laravel after processing trusted proxies (i.e., the effective client IP).
+- `remote_addr`: The direct connection IP (usually your load balancer or Cloudflare).
+- `x_forwarded_for`: The full X-Forwarded-For header (may contain multiple IPs).
+- `cf_connecting_ip`: The Cloudflare-specific header containing the original client IP (if present).
+- `true_client_ip`: The True-Client-IP header (if present).
+- `server_https`: The raw HTTPS server variable.
+- `is_secure`: Whether Laravel considers the request secure (HTTPS).
+
+If setup correctly, `laravel_ip` should match the actual client IP instead of a Cloudflare IP.
+
+## Why trusting proxies is important
+
+Most production Laravel apps sit behind one or more proxies (CDNs, load balancers, etc.). Those proxies terminate TLS and forward the request to your app, typically attaching standard forwarding headers such as X-Forwarded-For/Proto/Host/Port.
+
+Laravel will only use these headers if the request comes from a proxy you have explicitly trusted. Otherwise, Laravel ignores the headers (to prevent spoofing) and falls back to the direct connection details (REMOTE_ADDR, plain HTTP scheme, internal host/port).
+
+When proxies are not trusted, several things can go wrong:
+
+- Client IP is incorrect
+    - `Request::ip()` shows the proxy or 127.0.0.1 instead of the real client.
+    - Side effects: rate limiting and abuse protection over/under throttle, allow/deny lists misfire, audit logs and analytics record the wrong IP.
+
+- HTTPS awareness is lost
+    - `Request::isSecure()` may be false even when the original request was HTTPS.
+    - Side effects: generated links use `http://` (mixed content), “force HTTPS” logic misbehaves, and cookies that require the `Secure` flag (e.g., SameSite=None) may be dropped by browsers, impacting auth / sessions.
+
+- Host and port are wrong
+    - Generated URLs (redirects, emails, pagination), signed URLs, and callback URLs may be invalid because they use internal host/port instead of the public ones.
+    - Domain / subdomain routing or multi-tenant routing based on host can mis-route.
+
+Trusting your proxies tells Laravel which upstream IPs/CIDRs are allowed to supply forwarding headers and which header set to honor. Then, Laravel normalizes the request's effective IP, scheme, host, and port. Thereby mitigating the above issues.
+
+For security, avoid trusting all proxies unless your app is only reachable through a trusted network perimeter. Trusting the wrong IPs lets attackers spoof forwarding headers.
 
 ## Using with Laravel Octane
 

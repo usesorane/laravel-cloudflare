@@ -5,7 +5,7 @@ namespace Sorane\LaravelCloudflare\Commands;
 use Illuminate\Console\Command;
 use Sorane\LaravelCloudflare\LaravelCloudflare;
 
-class LaravelCloudflareCommand extends Command
+class CloudflareRefreshCommand extends Command
 {
     public $signature = 'cloudflare:refresh';
 
@@ -16,14 +16,21 @@ class LaravelCloudflareCommand extends Command
         $service = app(LaravelCloudflare::class);
 
         $this->info('Refreshing Cloudflare IP ranges...');
-        $service->refresh();
+        $success = $service->refresh();
+
+        if ($success) {
+            $this->info('Cloudflare IP ranges refreshed successfully.');
+        } else {
+            $this->error('Failed to refresh Cloudflare IP ranges. Using cached or fallback data.');
+        }
 
         $v4 = $service->ipv4();
         $v6 = $service->ipv6();
         $all = $service->all();
 
-        $this->line('IPv4 (current or fallback): '.count($v4).', IPv6 (current or fallback): '.count($v6).', All (current or fallback): '.count($all));
-        $this->comment('Cloudflare IP ranges refreshed (current + last_good updated on success).');
+        $this->line('IPv4 (current or fallback): '.count($v4));
+        $this->line('IPv6 (current or fallback): '.count($v6));
+        $this->line('All (current or fallback): '.count($all));
 
         return self::SUCCESS;
     }
