@@ -139,6 +139,8 @@ php artisan cloudflare:cache-info
 
 5. Enable the diagnostics route (optional) by setting `CLOUDFLARE_DIAGNOSTICS_ENABLED=true` in your `.env` file. Then visit `/cloudflare-diagnose` in your app to see how Cloudflare and your server headers are interpreted by Laravel.
 
+6. If the `laravel_ip` in the diagnostics output from step 5 does not show your real client IP, read section [Determine which proxies to trust besides Cloudflare](#determine-which-proxies-to-trust-besides-cloudflare).
+
 ## The LaravelCloudflare service
 
 ```php
@@ -229,6 +231,18 @@ When proxies are not trusted, several things can go wrong:
 Trusting your proxies tells Laravel which upstream IPs/CIDRs are allowed to supply forwarding headers and which header set to honor. Then, Laravel normalizes the request's effective IP, scheme, host, and port. Thereby mitigating the above issues.
 
 For security, avoid trusting all proxies unless your app is only reachable through a trusted network perimeter. Trusting the wrong IPs lets attackers spoof forwarding headers.
+
+## Determine which proxies to trust besides Cloudflare
+
+In addition to Cloudflare IPs, it's sometimes necessary to trust other proxies that forward traffic to your app.
+
+- Receiving traffic via Cloudflare? Include the Cloudflare IP ranges from this package.
+- Running a local web server in front of your app (e.g., Nginx → Octane)? Also include the local upstreams, commonly `127.0.0.1` and `::1`.
+- Using a load balancer or ingress? Include its IP/CIDR (or the local web server that fronts your app).
+
+Quick check: enable `CLOUDFLARE_DIAGNOSTICS_ENABLED=true` and visit `/cloudflare-diagnose`. If `laravel_ip` shows your real client IP and `is_secure` is true for HTTPS, you're set.
+
+Security tip: trust only the proxies that truly forward traffic to your app; avoid `'*'` on public apps.
 
 ## Using with Laravel Octane
 
