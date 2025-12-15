@@ -24,6 +24,9 @@ return [
 
         // Allow falling back to the last known good list when current is missing/expired.
         'allow_stale' => env('CLOUDFLARE_ALLOW_STALE', true),
+
+        // Throw exception when cache is empty (both current and last_good) instead of returning empty array
+        'throw_on_empty' => env('CLOUDFLARE_THROW_ON_EMPTY', false),
     ],
 
     // HTTP client settings for fetching IP ranges from Cloudflare
@@ -49,5 +52,9 @@ return [
 
         // Path for the diagnostics route
         'path' => env('CLOUDFLARE_DIAGNOSTICS_PATH', '/cloudflare-diagnose'),
+
+        // Middleware to apply to the diagnostics route (e.g., ['auth', 'can:view-diagnostics'])
+        // IMPORTANT: For security, add authentication middleware in production
+        'middleware' => ['web'],
     ],
 ];

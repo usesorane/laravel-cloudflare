@@ -7,7 +7,7 @@ use Sorane\LaravelCloudflare\LaravelCloudflare;
 
 class CloudflareCacheInfoCommand extends Command
 {
-    public $signature = 'cloudflare:cache-info';
+    public $signature = 'cloudflare:cache-info {--json : Output as JSON}';
 
     public $description = 'Display information about the cached Cloudflare IP ranges.';
 
@@ -16,6 +16,12 @@ class CloudflareCacheInfoCommand extends Command
         $service = app(LaravelCloudflare::class);
 
         $info = $service->cacheInfo();
+
+        if ($this->option('json')) {
+            $this->line(json_encode($info, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+            return self::SUCCESS;
+        }
 
         $this->info('Cloudflare IP Cache Information');
         $this->line('Cache Store      : '.($info['store'] ?? 'default'));

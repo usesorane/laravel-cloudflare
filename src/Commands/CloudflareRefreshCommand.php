@@ -32,6 +32,6 @@ class CloudflareRefreshCommand extends Command
         $this->line('IPv6 (current or fallback): '.count($v6));
         $this->line('All (current or fallback): '.count($all));
 
-        return self::SUCCESS;
+        return $success ? self::SUCCESS : self::FAILURE;
     }
 }

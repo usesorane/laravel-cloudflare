@@ -5,6 +5,7 @@ namespace Sorane\LaravelCloudflare;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Sorane\LaravelCloudflare\Commands\CloudflareCacheInfoCommand;
+use Sorane\LaravelCloudflare\Commands\CloudflareClearCommand;
 use Sorane\LaravelCloudflare\Commands\CloudflareRefreshCommand;
 use Sorane\LaravelCloudflare\Http\Controllers\CloudflareDiagnosticsController;
 
@@ -33,6 +34,7 @@ class LaravelCloudflareServiceProvider extends ServiceProvider
             $this->commands([
                 CloudflareRefreshCommand::class,
                 CloudflareCacheInfoCommand::class,
+                CloudflareClearCommand::class,
             ]);
         }
 
@@ -40,8 +42,9 @@ class LaravelCloudflareServiceProvider extends ServiceProvider
         $config = (array) config('laravel-cloudflare.diagnostics', []);
         if (($config['enabled'] ?? false) === true) {
             $path = (string) ($config['path'] ?? '/cloudflare-diagnose');
+            $middleware = $config['middleware'] ?? ['web'];
 
-            Route::middleware('web')
+            Route::middleware($middleware)
                 ->get($path, CloudflareDiagnosticsController::class)
                 ->name('laravel-cloudflare.diagnostics');
         }

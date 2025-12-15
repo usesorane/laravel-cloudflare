@@ -83,13 +83,20 @@ return [
 - Fetches Cloudflare IP ranges from:
 	- https://www.cloudflare.com/ips-v4
 	- https://www.cloudflare.com/ips-v6
+- Validates IP ranges in CIDR notation before caching
 - Caches the lists (default 7 days) and keeps a permanent fallback copy
-- Provides a command to keep the list up-to-date: `php artisan cloudflare:refresh`
+- Provides commands to manage the cache:
+    - `php artisan cloudflare:refresh` - fetch and cache the latest IPs
+    - `php artisan cloudflare:cache-info` - view cache status (supports `--json` flag)
+    - `php artisan cloudflare:clear` - clear cached IPs
+- Dispatches events for extensibility:
+    - `CloudflareIpsRefreshed` - fired when IPs are successfully refreshed
+    - `CloudflareRefreshFailed` - fired when refresh fails
 - Interact with the lists in your code via the `LaravelCloudflare` service:
     - `ipv4()`: get IPv4 addresses
     - `ipv6()`: get IPv6 addresses
     - `all()`: get all addresses (v4 + v6)
-    - `refresh()`: fetch and cache immediately
+    - `refresh()`: fetch and cache immediately (returns bool success)
     - `cacheInfo()`: get info about the cached lists
 
 ## Quick usage
@@ -169,6 +176,7 @@ Lookup order for `ipv4()`, `ipv6()`, and `all()`:
 Relevant config options (`config/laravel-cloudflare.php`):
 * `cache.ttl` – lifetime for current list (seconds, null = forever).
 * `cache.allow_stale` – whether to fall back to last_good when current missing.
+* `cache.throw_on_empty` – throw exception when cache is empty instead of returning empty array (default: false).
 * Distinct key sets under `cache.keys.current` and `cache.keys.last_good`.
 
 Operational recommendation:
@@ -180,9 +188,16 @@ Operational recommendation:
 
 You can expose a small diagnostics endpoint to see how Cloudflare and your server headers are interpreted by Laravel.
 
+**⚠️ SECURITY WARNING**: The diagnostics endpoint exposes information about your proxy configuration. By default, it uses only the `web` middleware without authentication. For production environments, you should:
+- Keep it disabled (`CLOUDFLARE_DIAGNOSTICS_ENABLED=false`)
+- Or add authentication middleware in the config file
+- Or restrict access by IP address
+- Or only enable it in development/staging environments
+
 - Enable it via env/config:
     - `CLOUDFLARE_DIAGNOSTICS_ENABLED=true`
     - Optional custom path: `CLOUDFLARE_DIAGNOSTICS_PATH=/cloudflare-diagnose` (default is `/cloudflare-diagnose`)
+    - Optional middleware: Configure in `config/laravel-cloudflare.php` (e.g., `['web', 'auth']`)
 - When enabled, a GET endpoint is registered at the configured path and returns JSON like:
 
 ```json
@@ -207,6 +222,84 @@ How to interpret:
 - `is_secure`: Whether Laravel considers the request secure (HTTPS).
 
 If setup correctly, `laravel_ip` should match the actual client IP instead of a Cloudflare IP.
+
+## Events
+
+The package dispatches events that you can listen to for custom logic:
+
+### CloudflareIpsRefreshed
+
+Fired when IP ranges are successfully fetched and cached.
+
+```php
+use Sorane\LaravelCloudflare\Events\CloudflareIpsRefreshed;
+
+// In your EventServiceProvider or listener
+Event::listen(function (CloudflareIpsRefreshed $event) {
+    // $event->ipv4 - array of IPv4 ranges
+    // $event->ipv6 - array of IPv6 ranges
+
+    Log::info('Cloudflare IPs refreshed', [
+        'ipv4_count' => count($event->ipv4),
+        'ipv6_count' => count($event->ipv6),
+    ]);
+});
+```
+
+### CloudflareRefreshFailed
+
+Fired when the refresh operation fails (e.g., network error, empty response).
+
+```php
+use Sorane\LaravelCloudflare\Events\CloudflareRefreshFailed;
+
+Event::listen(function (CloudflareRefreshFailed $event) {
+    // $event->ipv4Empty - bool indicating if IPv4 fetch failed
+    // $event->ipv6Empty - bool indicating if IPv6 fetch failed
+
+    // Send alert to monitoring service
+    if ($event->ipv4Empty && $event->ipv6Empty) {
+        // Both failed - critical
+    }
+});
+```
+
+## Commands
+
+### cloudflare:refresh
+
+Fetches the latest IP ranges from Cloudflare and caches them. Returns exit code 0 on success, 1 on failure.
+
+```bash
+php artisan cloudflare:refresh
+```
+
+### cloudflare:cache-info
+
+Displays information about the currently cached IP ranges.
+
+```bash
+# Human-readable output
+php artisan cloudflare:cache-info
+
+# JSON output for scripting
+php artisan cloudflare:cache-info --json
+```
+
+### cloudflare:clear
+
+Clears cached IP ranges. Useful for testing or troubleshooting.
+
+```bash
+# Clear all caches (current and last_good)
+php artisan cloudflare:clear
+
+# Clear only current cache
+php artisan cloudflare:clear --current
+
+# Clear only last_good cache
+php artisan cloudflare:clear --last-good
+```
 
 ## Why trusting proxies is important
 
@@ -265,6 +358,38 @@ If either applies:
 - Restart the Octane workers with `php artisan octane:restart` after running `php artisan cloudflare:refresh`.
 
 See the Laravel Octane documentation for more details: https://laravel.com/docs/octane
+
+## Security Considerations
+
+### Cache Store Security
+
+The IP ranges cached by this package become your trusted proxy list. If an attacker can compromise your cache store (Redis, Memcached, etc.), they could inject malicious IPs into the trusted proxy list, allowing them to spoof forwarding headers.
+
+**Recommendations:**
+- Secure your cache store with proper authentication and network isolation
+- Use a dedicated cache store for security-critical data if needed
+- Monitor cache access logs for suspicious activity
+- Document this risk in your security procedures
+
+### IP Validation
+
+The package validates that fetched IPs are in valid CIDR notation before caching. Invalid entries are logged and skipped. However, this is a format check only - it doesn't verify that the IPs are actually owned by Cloudflare.
+
+### Exception Handling
+
+By default, when the cache is empty (both current and last_good), methods return an empty array and log a warning. This could silently break proxy trust configuration.
+
+To fail fast instead:
+```php
+// In config/laravel-cloudflare.php or .env
+'throw_on_empty' => true, // or CLOUDFLARE_THROW_ON_EMPTY=true
+```
+
+When enabled, `all()`, `ipv4()`, and `ipv6()` will throw `EmptyCacheException` if no cached data is available.
+
+### Diagnostics Endpoint
+
+See the [Diagnostics route section](#diagnostics-route-optional) for important security warnings about this feature.
 
 ## License
 
