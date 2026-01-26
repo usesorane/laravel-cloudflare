@@ -6,3 +6,6 @@
 /vendor
 composer.lock
 
+/CLAUDE.md
+/.mcp.json
+/.ai/mcp/mcp.json

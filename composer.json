@@ -35,19 +35,18 @@
     },
     "autoload": {
         "psr-4": {
-            "Sorane\\LaravelCloudflare\\": "src/",
-            "Sorane\\LaravelCloudflare\\Database\\Factories\\": "database/factories/"
+            "Sorane\\LaravelCloudflare\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Sorane\\LaravelCloudflare\\Tests\\": "tests/",
-            "Workbench\\App\\": "workbench/app/"
+            "Sorane\\LaravelCloudflare\\Tests\\": "tests/"
         }
     },
     "scripts": {
-        "post-autoload-dump": "@composer run prepare",
-        "prepare": "@php vendor/bin/testbench package:discover --ansi",
+        "post-update-cmd": [
+            "./vendor/bin/testbench boost:update"
+        ],
         "analyse": "vendor/bin/phpstan analyse",
         "test": "vendor/bin/pest",
         "test-coverage": "vendor/bin/pest --coverage",
