@@ -46,6 +46,18 @@ return [
         'failed_fetch' => env('CLOUDFLARE_LOG_FAILED_FETCH', true),
     ],
 
+    'auto_fetch' => [
+        // Enable automatic fetching when cache is empty (both current and last_good)
+        'enabled' => env('CLOUDFLARE_AUTO_FETCH_ENABLED', true),
+
+        // Minimum interval between auto-fetch attempts (seconds)
+        // Prevents hammering Cloudflare if their endpoints are unreachable
+        'rate_limit' => env('CLOUDFLARE_AUTO_FETCH_RATE_LIMIT', 600), // 10 minutes
+
+        // Cache key for tracking last auto-fetch attempt
+        'rate_limit_key' => 'cloudflare:autofetch:last_attempt',
+    ],
+
     'diagnostics' => [
         // Enable the diagnostics route (default: false)
         'enabled' => env('CLOUDFLARE_DIAGNOSTICS_ENABLED', false),
