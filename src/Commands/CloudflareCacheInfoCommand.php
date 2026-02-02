@@ -55,7 +55,15 @@ class CloudflareCacheInfoCommand extends Command
             $this->newLine();
         }
 
-        $this->newLine();
+        if (isset($info['fallback'])) {
+            $v4Count = $info['fallback']['ipv4_count'] ?? 0;
+            $v6Count = $info['fallback']['ipv6_count'] ?? 0;
+            if ($v4Count > 0 || $v6Count > 0) {
+                $this->line("Config fallback: {$v4Count} IPv4, {$v6Count} IPv6");
+                $this->newLine();
+            }
+        }
+
         $this->comment('Use cloudflare:refresh to populate or refresh the current cache (last_good updates on successful refresh).');
 
         return self::SUCCESS;

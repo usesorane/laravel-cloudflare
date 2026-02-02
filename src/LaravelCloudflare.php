@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Psr\SimpleCache\InvalidArgumentException;
-use Sorane\LaravelCloudflare\Events\CloudflareAutoFetchAttempted;
 use Sorane\LaravelCloudflare\Events\CloudflareIpsRefreshed;
 use Sorane\LaravelCloudflare\Events\CloudflareRefreshFailed;
 use Sorane\LaravelCloudflare\Exceptions\EmptyCacheException;
@@ -36,7 +35,7 @@ class LaravelCloudflare
 
     /**
      * Get all Cloudflare IP ranges (both IPv4 and IPv6) from cache only.
-     * Order: current -> last_good -> [] (logs warning if empty and allowed).
+     * Order: current -> last_good -> config fallback -> [] (logs warning if empty and allowed).
      *
      * @return array<int, string>
      *
@@ -62,11 +61,9 @@ class LaravelCloudflare
             return $this->memoized['all'] = $fallback;
         }
 
-        if ($this->attemptAutoFetch('all')) {
-            $current = $this->cache->get($currentKey);
-            if (is_array($current) && $current !== []) {
-                return $this->memoized['all'] = $current;
-            }
+        $configFallback = $this->configFallback('all');
+        if ($configFallback !== []) {
+            return $this->memoized['all'] = $configFallback;
         }
 
         $this->logEmptyOnce('all');
@@ -75,7 +72,7 @@ class LaravelCloudflare
     }
 
     /**
-     * Get IPv4 ranges from cache (current -> last_good -> []).
+     * Get IPv4 ranges from cache (current -> last_good -> config fallback -> []).
      *
      * @return array<int, string>
      *
@@ -102,11 +99,9 @@ class LaravelCloudflare
             return $this->memoized['ipv4'] = $fallback;
         }
 
-        if ($this->attemptAutoFetch('ipv4')) {
-            $current = $this->cache->get($currentKey);
-            if (is_array($current) && $current !== []) {
-                return $this->memoized['ipv4'] = $current;
-            }
+        $configFallback = $this->configFallback('ipv4');
+        if ($configFallback !== []) {
+            return $this->memoized['ipv4'] = $configFallback;
         }
 
         $this->logEmptyOnce('ipv4');
@@ -115,7 +110,7 @@ class LaravelCloudflare
     }
 
     /**
-     * Get IPv6 ranges from cache (current -> last_good -> []).
+     * Get IPv6 ranges from cache (current -> last_good -> config fallback -> []).
      *
      * @return array<int, string>
      *
@@ -141,11 +136,9 @@ class LaravelCloudflare
             return $this->memoized['ipv6'] = $fallback;
         }
 
-        if ($this->attemptAutoFetch('ipv6')) {
-            $current = $this->cache->get($currentKey);
-            if (is_array($current) && $current !== []) {
-                return $this->memoized['ipv6'] = $current;
-            }
+        $configFallback = $this->configFallback('ipv6');
+        if ($configFallback !== []) {
+            return $this->memoized['ipv6'] = $configFallback;
         }
 
         $this->logEmptyOnce('ipv6');
@@ -336,17 +329,17 @@ class LaravelCloudflare
             }
         }
 
-        $autoFetchKey = Config::get('laravel-cloudflare.auto_fetch.rate_limit_key', 'cloudflare:autofetch:last_attempt');
+        $fallbackV4 = Config::get('laravel-cloudflare.fallback.ipv4', []);
+        $fallbackV6 = Config::get('laravel-cloudflare.fallback.ipv6', []);
 
         return [
             'store' => Config::get('laravel-cloudflare.cache.store'),
             'configured_ttl' => Config::get('laravel-cloudflare.cache.ttl'),
             'allow_stale' => Config::get('laravel-cloudflare.cache.allow_stale'),
             'segments' => $details,
-            'auto_fetch' => [
-                'enabled' => Config::get('laravel-cloudflare.auto_fetch.enabled', true),
-                'rate_limit' => Config::get('laravel-cloudflare.auto_fetch.rate_limit', 600),
-                'currently_rate_limited' => $this->cache->has($autoFetchKey),
+            'fallback' => [
+                'ipv4_count' => is_array($fallbackV4) ? count($fallbackV4) : 0,
+                'ipv6_count' => is_array($fallbackV6) ? count($fallbackV6) : 0,
             ],
         ];
     }
@@ -393,34 +386,37 @@ class LaravelCloudflare
     }
 
     /**
-     * Attempt to automatically fetch IP ranges when cache is empty.
-     * Returns true if fetch was attempted and succeeded.
+     * Get fallback IPs from config when cache is empty.
      *
      * @param  'all'|'ipv4'|'ipv6'  $type
+     * @return array<int, string>
      */
-    protected function attemptAutoFetch(string $type): bool
+    protected function configFallback(string $type): array
     {
-        if (! Config::get('laravel-cloudflare.auto_fetch.enabled', true)) {
-            return false;
+        if ($type === 'all') {
+            $v4 = Config::get('laravel-cloudflare.fallback.ipv4', []);
+            $v6 = Config::get('laravel-cloudflare.fallback.ipv6', []);
+
+            if (! is_array($v4)) {
+                $v4 = [];
+            }
+            if (! is_array($v6)) {
+                $v6 = [];
+            }
+
+            $merged = array_values(array_unique(array_merge($v4, $v6)));
+
+            return $merged;
         }
 
-        $rateLimitKey = Config::get('laravel-cloudflare.auto_fetch.rate_limit_key', 'cloudflare:autofetch:last_attempt');
+        $key = $type === 'ipv4' ? 'ipv4' : 'ipv6';
+        $fallback = Config::get("laravel-cloudflare.fallback.$key", []);
 
-        if ($this->cache->has($rateLimitKey)) {
-            CloudflareAutoFetchAttempted::dispatch($type, true, false);
-
-            return false;
+        if (! is_array($fallback)) {
+            return [];
         }
 
-        // Set rate limit BEFORE attempting fetch to prevent thundering herd
-        $rateLimitTtl = (int) Config::get('laravel-cloudflare.auto_fetch.rate_limit', 600);
-        $this->cache->put($rateLimitKey, now()->timestamp, $rateLimitTtl);
-
-        $success = $this->refresh();
-
-        CloudflareAutoFetchAttempted::dispatch($type, false, $success);
-
-        return $success;
+        return $fallback;
     }
 
     /**

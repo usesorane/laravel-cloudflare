@@ -46,16 +46,17 @@ return [
         'failed_fetch' => env('CLOUDFLARE_LOG_FAILED_FETCH', true),
     ],
 
-    'auto_fetch' => [
-        // Enable automatic fetching when cache is empty (both current and last_good)
-        'enabled' => env('CLOUDFLARE_AUTO_FETCH_ENABLED', true),
-
-        // Minimum interval between auto-fetch attempts (seconds)
-        // Prevents hammering Cloudflare if their endpoints are unreachable
-        'rate_limit' => env('CLOUDFLARE_AUTO_FETCH_RATE_LIMIT', 600), // 10 minutes
-
-        // Cache key for tracking last auto-fetch attempt
-        'rate_limit_key' => 'cloudflare:autofetch:last_attempt',
+    // Static fallback IPs to use when cache is empty (both current and last_good).
+    // This is useful as a safety net to ensure your app always has IPs to trust,
+    // even before the first cloudflare:refresh runs.
+    // You can populate these with current Cloudflare IPs from https://www.cloudflare.com/ips/
+    'fallback' => [
+        'ipv4' => [
+            // Example: '173.245.48.0/20', '103.21.244.0/22', ...
+        ],
+        'ipv6' => [
+            // Example: '2400:cb00::/32', '2606:4700::/32', ...
+        ],
     ],
 
     'diagnostics' => [

@@ -68,6 +68,12 @@ return [
         'failed_fetch' => env('CLOUDFLARE_LOG_FAILED_FETCH', true),
     ],
 
+    // Static fallback IPs to use when cache is empty (both current and last_good).
+    'fallback' => [
+        'ipv4' => [],
+        'ipv6' => [],
+    ],
+
     'diagnostics' => [
         // Enable the diagnostics route (default: false)
         'enabled' => env('CLOUDFLARE_DIAGNOSTICS_ENABLED', false),
@@ -171,18 +177,43 @@ To avoid network calls during request handling and still remain resilient if Clo
 Lookup order for `ipv4()`, `ipv6()`, and `all()`:
 1. current list
 2. last_good list
-3. (logs a warning and returns an empty array only if neither exists – typically only before the very first refresh)
+3. config fallback (if configured)
+4. (logs a warning and returns an empty array only if none of the above exist – typically only before the very first refresh)
 
 Relevant config options (`config/laravel-cloudflare.php`):
 * `cache.ttl` – lifetime for current list (seconds, null = forever).
 * `cache.allow_stale` – whether to fall back to last_good when current missing.
 * `cache.throw_on_empty` – throw exception when cache is empty instead of returning empty array (default: false).
 * Distinct key sets under `cache.keys.current` and `cache.keys.last_good`.
+* `fallback.ipv4` and `fallback.ipv6` – static IP arrays to use when cache is empty (see below).
 
 Operational recommendation:
 * Run `cloudflare:refresh` in your deployment pipeline and via the scheduler.
 * Keep the TTL of last_good infinite (null) to ensure a fallback is always available.
 * Regularly check logs and use `cloudflare:cache-info` to monitor cache status.
+
+## Static fallback IPs (optional)
+
+As a safety net, you can configure static fallback IPs that will be used when the cache is completely empty (e.g., before the first `cloudflare:refresh` runs). This ensures your app always has IPs to trust, even on first deployment.
+
+```php
+// In config/laravel-cloudflare.php
+'fallback' => [
+    'ipv4' => [
+        '173.245.48.0/20',
+        '103.21.244.0/22',
+        '103.22.200.0/22',
+        // ... add more from https://www.cloudflare.com/ips-v4
+    ],
+    'ipv6' => [
+        '2400:cb00::/32',
+        '2606:4700::/32',
+        // ... add more from https://www.cloudflare.com/ips-v6
+    ],
+],
+```
+
+**Note:** These fallback IPs are only used when both cache layers (current and last_good) are empty. Once `cloudflare:refresh` runs successfully, the cached IPs take precedence. Keep your fallback IPs updated periodically by checking https://www.cloudflare.com/ips/
 
 ## Diagnostics route (optional)
 
