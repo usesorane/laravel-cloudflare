@@ -22,6 +22,19 @@ composer require usesorane/laravel-cloudflare
 php artisan vendor:publish --tag="laravel-cloudflare"
 ```
 
+## Laravel Boost Integration
+
+This package includes built-in support for [Laravel Boost](https://github.com/laravel/boost), providing AI coding agents with context about how to use and configure this package.
+
+When you run `php artisan boost:install` in a project that has this package installed:
+
+- **A minimal guideline** is loaded with a quick command reference
+- **The `laravel-cloudflare-setup` skill** becomes available for on-demand installation assistance, including the complete setup process, `bootstrap/app.php` middleware configuration, troubleshooting, and API reference
+
+This approach keeps context overhead minimal while providing comprehensive help when needed. No additional configuration is required - Boost automatically discovers these resources from the package.
+
+## Configuration
+
 Content of the config file:
 
 ```php
@@ -421,17 +434,6 @@ When enabled, `all()`, `ipv4()`, and `ipv6()` will throw `EmptyCacheException` i
 ### Diagnostics Endpoint
 
 See the [Diagnostics route section](#diagnostics-route-optional) for important security warnings about this feature.
-
-## Laravel Boost Integration
-
-This package includes built-in support for [Laravel Boost](https://github.com/laravel/boost), providing AI coding agents with context about how to use and configure this package.
-
-When you run `php artisan boost:install` in a project that has this package installed:
-
-- **A minimal guideline** is loaded with a quick command reference
-- **The `laravel-cloudflare-setup` skill** becomes available for on-demand installation assistance, including the complete setup process, `bootstrap/app.php` middleware configuration, troubleshooting, and API reference
-
-This approach keeps context overhead minimal while providing comprehensive help when needed. No additional configuration is required - Boost automatically discovers these resources from the package.
 
 ## License
 
