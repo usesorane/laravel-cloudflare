@@ -22,7 +22,7 @@
     },
     "require-dev": {
         "larastan/larastan": "^3.0",
-        "laravel/boost": "^1.1",
+        "laravel/boost": "^2.0",
         "laravel/pint": "^1.14",
         "nunomaduro/collision": "^8.8",
         "orchestra/testbench": "^10.0.0||^9.0.0",
@@ -31,7 +31,8 @@
         "pestphp/pest-plugin-laravel": "^4.0",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan-deprecation-rules": "^2.0",
-        "phpstan/phpstan-phpunit": "^2.0"
+        "phpstan/phpstan-phpunit": "^2.0",
+        "spatie/boost-spatie-guidelines": "^1.0"
     },
     "autoload": {
         "psr-4": {
@@ -40,12 +41,13 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Sorane\\LaravelCloudflare\\Tests\\": "tests/"
+            "Sorane\\LaravelCloudflare\\Tests\\": "tests/",
+            "Workbench\\App\\": "workbench/app/"
         }
     },
     "scripts": {
         "post-update-cmd": [
-            "./vendor/bin/testbench boost:update"
+            "@php artisan boost:update --ansi"
         ],
         "analyse": "vendor/bin/phpstan analyse",
         "test": "vendor/bin/pest",
